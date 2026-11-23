@@ -11,6 +11,7 @@ import { Button } from '../../../shared/ui/Button'
 import { Card } from '../../../shared/ui/Card'
 import { Modal } from '../../../shared/ui/Modal'
 import { formatFecha, formatPrecio } from '../../../shared/utils/formato'
+import { useAuthStore } from '../../../store/authStore'
 import { PedidoModal } from '../components/PedidoModal'
 import { useCancelarPedido, usePedidos } from '../hooks/usePedidos'
 import type { Pedido } from '../types/pedido'
@@ -19,6 +20,7 @@ const POR_PAGINA = 10
 
 export function MisPedidosPage() {
   const location = useLocation()
+  const usuarioId = useAuthStore((s) => s.usuario?.id)
   const creado = (location.state as { creado?: number } | null)?.creado
   const [pagina, setPagina] = useState(0)
   const [detalleId, setDetalleId] = useState<number | null>(null)
@@ -28,12 +30,25 @@ export function MisPedidosPage() {
   const pedidos = usePedidos({ skip: pagina * POR_PAGINA, limit: POR_PAGINA })
   const cancelar = useCancelarPedido()
 
+  // Solo se ofrece cancelar un pedido propio y PENDIENTE (RN-04)
+  const puedeCancelar = (p: Pedido) => p.usuario_id === usuarioId && p.estado === 'PENDIENTE'
+
+  const abrirCancelacion = (p: Pedido) => {
+    setError(null)
+    setACancelar(p)
+  }
+
+  const cerrarCancelacion = () => {
+    setError(null)
+    setACancelar(null)
+  }
+
   const confirmarCancelacion = async () => {
     if (!aCancelar) return
     setError(null)
     try {
       await cancelar.mutateAsync(aCancelar.id)
-      setACancelar(null)
+      cerrarCancelacion()
     } catch (e) {
       setError(handleApiError(e))
     }
@@ -84,8 +99,8 @@ export function MisPedidosPage() {
                   <Button variante="secundario" tamano="sm" onClick={() => setDetalleId(p.id)}>
                     Ver detalle
                   </Button>
-                  {p.estado === 'PENDIENTE' && (
-                    <Button variante="peligro" tamano="sm" onClick={() => setACancelar(p)}>
+                  {puedeCancelar(p) && (
+                    <Button variante="peligro" tamano="sm" onClick={() => abrirCancelacion(p)}>
                       Cancelar
                     </Button>
                   )}
@@ -101,12 +116,12 @@ export function MisPedidosPage() {
         pedidoId={detalleId}
         onCerrar={() => setDetalleId(null)}
         acciones={(pedido) =>
-          pedido.estado === 'PENDIENTE' ? (
+          puedeCancelar(pedido) ? (
             <Button
               variante="peligro"
               onClick={() => {
                 setDetalleId(null)
-                setACancelar(pedido)
+                abrirCancelacion(pedido)
               }}
             >
               Cancelar pedido
@@ -115,7 +130,7 @@ export function MisPedidosPage() {
         }
       />
 
-      <Modal titulo="Cancelar pedido" abierto={aCancelar !== null} onCerrar={() => setACancelar(null)}>
+      <Modal titulo="Cancelar pedido" abierto={aCancelar !== null} onCerrar={cerrarCancelacion}>
         <p>
           ¿Querés cancelar el pedido #{aCancelar?.id}? Los productos vuelven al stock y no se puede deshacer.
         </p>
@@ -123,7 +138,7 @@ export function MisPedidosPage() {
           <MensajeError mensaje={error} />
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <Button variante="secundario" onClick={() => setACancelar(null)}>
+          <Button variante="secundario" onClick={cerrarCancelacion}>
             Volver
           </Button>
           <Button variante="peligro" cargando={cancelar.isPending} onClick={() => void confirmarCancelacion()}>

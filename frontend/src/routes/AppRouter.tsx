@@ -14,6 +14,7 @@ import { CatalogoPage } from '../features/productos/pages/CatalogoPage'
 import { AdminUsuariosPage } from '../features/usuarios/pages/AdminUsuariosPage'
 import { AdminLayout } from '../shared/layout/AdminLayout'
 import { MainLayout } from '../shared/layout/MainLayout'
+import { ClienteRoute } from './ClienteRoute'
 import { ProtectedRoute } from './ProtectedRoute'
 
 export function AppRouter() {
@@ -25,11 +26,15 @@ export function AppRouter() {
           <Route path="/" element={<CatalogoPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/carrito" element={<CarritoPage />} />
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-          {/* Con sesión (cualquier rol) */}
-          <Route element={<ProtectedRoute />}>
+          {/* Flujo de compra: visitantes y clientes (el admin va a su panel) */}
+          <Route element={<ClienteRoute />}>
+            <Route path="/carrito" element={<CarritoPage />} />
+          </Route>
+
+          {/* Solo cliente con sesión */}
+          <Route element={<ProtectedRoute roles={['user']} />}>
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/mis-pedidos" element={<MisPedidosPage />} />
           </Route>

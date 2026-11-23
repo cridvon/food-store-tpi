@@ -48,11 +48,13 @@ export function useCambiarEstadoPedido() {
   const invalidar = useInvalidarPedidosYProductos()
   return useMutation({
     mutationFn: ({ id, estado }: { id: number; estado: EstadoPedido }) => cambiarEstado(id, estado),
-    onSuccess: invalidar,
+    // onSettled: también ante un error (por ejemplo, el pedido ya cambió de estado) se vuelve a
+    // pedir el dato al backend, así la pantalla nunca muestra un estado viejo
+    onSettled: invalidar,
   })
 }
 
 export function useCancelarPedido() {
   const invalidar = useInvalidarPedidosYProductos()
-  return useMutation({ mutationFn: (id: number) => cancelarPedido(id), onSuccess: invalidar })
+  return useMutation({ mutationFn: (id: number) => cancelarPedido(id), onSettled: invalidar })
 }

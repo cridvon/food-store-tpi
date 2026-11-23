@@ -13,6 +13,7 @@ export function Navbar() {
   const logout = useAuthStore((s) => s.logout)
   const cantidad = useCartStore((s) => s.items.reduce((suma, i) => suma + i.cantidad, 0))
   const navigate = useNavigate()
+  const esAdmin = usuario?.role === 'admin'
 
   const cerrarSesion = async () => {
     await logout()
@@ -31,20 +32,23 @@ export function Navbar() {
           <NavLink to="/" end className={enlace}>
             Catálogo
           </NavLink>
-          <NavLink to="/carrito" className={enlace}>
-            Carrito
-            {cantidad > 0 && (
-              <span className="ml-1.5 rounded-full bg-brand-600 px-1.5 py-0.5 text-xs text-white tabular-nums">
-                {cantidad}
-              </span>
-            )}
-          </NavLink>
-          {usuario && (
+          {/* El flujo de compra es del cliente; el admin gestiona desde el panel */}
+          {!esAdmin && (
+            <NavLink to="/carrito" className={enlace}>
+              Carrito
+              {cantidad > 0 && (
+                <span className="ml-1.5 rounded-full bg-brand-600 px-1.5 py-0.5 text-xs text-white tabular-nums">
+                  {cantidad}
+                </span>
+              )}
+            </NavLink>
+          )}
+          {usuario && !esAdmin && (
             <NavLink to="/mis-pedidos" className={enlace}>
               Mis pedidos
             </NavLink>
           )}
-          {usuario?.role === 'admin' && (
+          {esAdmin && (
             <NavLink to="/admin" className={enlace}>
               Panel admin
             </NavLink>
@@ -56,7 +60,7 @@ export function Navbar() {
             <span className="text-right text-sm leading-tight">
               <span className="block font-medium">{usuario.full_name}</span>
               <span className="block text-xs text-stone-500">
-                {usuario.role === 'admin' ? 'Administrador' : 'Cliente'}
+                {esAdmin ? 'Administrador' : 'Cliente'}
               </span>
             </span>
             <button

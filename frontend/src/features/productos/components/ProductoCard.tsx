@@ -1,10 +1,12 @@
 import { Button } from '../../../shared/ui/Button'
 import { formatPrecio } from '../../../shared/utils/formato'
+import { useAuthStore } from '../../../store/authStore'
 import { useCartStore } from '../../../store/cartStore'
 import type { Producto } from '../types/producto'
 import { ProductoImagen } from './ProductoImagen'
 
 export function ProductoCard({ producto }: { producto: Producto }) {
+  const esAdmin = useAuthStore((s) => s.usuario?.role === 'admin')
   const agregar = useCartStore((s) => s.agregar)
   const enCarrito = useCartStore((s) => s.items.find((i) => i.producto_id === producto.id)?.cantidad ?? 0)
 
@@ -38,21 +40,26 @@ export function ProductoCard({ producto }: { producto: Producto }) {
             {sinStock ? 'Sin stock' : `Stock: ${producto.stock}`}
           </span>
         </div>
-        <Button
-          disabled={deshabilitado}
-          onClick={() =>
-            agregar({
-              producto_id: producto.id,
-              nombre: producto.nombre,
-              precio_unitario: producto.precio_base,
-              imagen_url: producto.imagen_url,
-              stock: producto.stock,
-            })
-          }
-        >
-          {textoBoton}
-        </Button>
-        {enCarrito > 0 && <p className="text-center text-xs text-brand-700">{enCarrito} en el carrito</p>}
+        {/* El administrador ve el catálogo pero no compra */}
+        {!esAdmin && (
+          <Button
+            disabled={deshabilitado}
+            onClick={() =>
+              agregar({
+                producto_id: producto.id,
+                nombre: producto.nombre,
+                precio_unitario: producto.precio_base,
+                imagen_url: producto.imagen_url,
+                stock: producto.stock,
+              })
+            }
+          >
+            {textoBoton}
+          </Button>
+        )}
+        {!esAdmin && enCarrito > 0 && (
+          <p className="text-center text-xs text-brand-700">{enCarrito} en el carrito</p>
+        )}
       </div>
     </article>
   )
