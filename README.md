@@ -5,7 +5,7 @@ Aplicación web de pedidos de comida: los clientes recorren el catálogo, arman 
 - **Alumnos:** Cristian Chiavón y Facundo Chiavón
 - **Materia:** Programación IV · Tecnicatura Universitaria en Programación a Distancia (UTN)
 - **Repositorio:** https://github.com/cridvon/food-store-tpi
-- **Video de demostración:** https://LINK-AL-VIDEO <!-- completar antes de entregar -->
+- **Video de demostración:** https://youtu.be/GAaNzyyiUTo
 
 ## Stack
 
