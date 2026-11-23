@@ -19,3 +19,7 @@ class CategoriaRepository(BaseRepository[Categoria]):
     def list_activas(self) -> Sequence[Categoria]:
         consulta = select(Categoria).where(col(Categoria.activo).is_(True)).order_by(col(Categoria.nombre))
         return self.session.exec(consulta).all()
+
+    def list_inactivas(self) -> Sequence[Categoria]:
+        consulta = select(Categoria).where(col(Categoria.activo).is_(False)).order_by(col(Categoria.nombre))
+        return self.session.exec(consulta).all()

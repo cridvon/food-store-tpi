@@ -153,6 +153,8 @@ frontend/src/
 | POST | `/admin/usuarios/{id}/activar` · `/desactivar` | admin |
 | GET | `/categorias` · `/categorias/{id}` | Público |
 | POST, PUT, DELETE | `/categorias` · `/categorias/{id}` | admin |
+| GET | `/categorias/inactivas` | admin |
+| PATCH | `/categorias/{id}/reactivar` | admin |
 | GET | `/productos?skip&limit&search&categoria_id&disponible` · `/productos/{id}` | Público |
 | POST, PUT, DELETE | `/productos` · `/productos/{id}` | admin |
 | PATCH | `/productos/{id}/stock` | admin |
@@ -161,5 +163,7 @@ frontend/src/
 | GET | `/pedidos/{id}` | Dueño o admin |
 | PATCH | `/pedidos/{id}/estado` | admin |
 | PATCH | `/pedidos/{id}/cancelar` | Dueño, solo en PENDIENTE |
+
+**Reactivar categorías:** la baja lógica no libera el nombre (como pide la consigna), así que una categoría dada de baja no se puede volver a crear. Desde *Panel admin > Categorías*, el interruptor «Mostrar dadas de baja» las lista y el botón **Reactivar** las recupera con el mismo id. `/categorias/inactivas` y `/categorias/{id}/reactivar` son endpoints agregados al TPI; reactivar responde 404 si no existe y 409 si ya está activa.
 
 Los códigos de cada endpoint (201, 204, 400, 401, 403, 404, 409 y 422) siguen la especificación del TPI y se pueden ver en `/docs`.

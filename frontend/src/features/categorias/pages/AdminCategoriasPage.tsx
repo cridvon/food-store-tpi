@@ -1,5 +1,5 @@
 import type { ColumnDef } from '@tanstack/react-table'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { handleApiError } from '../../../shared/api/handleApiError'
 import { EstadoError, MensajeError } from '../../../shared/components/EstadoError'
@@ -11,8 +11,10 @@ import { CategoriaForm } from '../components/CategoriaForm'
 import {
   useActualizarCategoria,
   useCategorias,
+  useCategoriasInactivas,
   useCrearCategoria,
   useEliminarCategoria,
+  useReactivarCategoria,
 } from '../hooks/useCategorias'
 import type { Categoria, CategoriaCreate } from '../types/categoria'
 
@@ -23,6 +25,9 @@ export function AdminCategoriasPage() {
   const crear = useCrearCategoria()
   const actualizar = useActualizarCategoria()
   const eliminar = useEliminarCategoria()
+  const reactivar = useReactivarCategoria()
+  const [verInactivas, setVerInactivas] = useState(false)
+  const inactivas = useCategoriasInactivas(verInactivas)
 
   const [edicion, setEdicion] = useState<Edicion>(null)
   const [aEliminar, setAEliminar] = useState<Categoria | null>(null)
@@ -59,10 +64,42 @@ export function AdminCategoriasPage() {
     setAEliminar(null)
   }
 
+  const reactivarMutacion = reactivar.mutateAsync
+  const reactivarCategoria = useCallback(
+    async (categoria: Categoria) => {
+      setError(null)
+      try {
+        await reactivarMutacion(categoria.id)
+      } catch (e) {
+        setError(handleApiError(e))
+      }
+    },
+    [reactivarMutacion],
+  )
+
+  // Con el interruptor activo se suman las dadas de baja al final de la tabla
+  const filas = useMemo(
+    () => [...(categorias.data ?? []), ...(verInactivas ? (inactivas.data ?? []) : [])],
+    [categorias.data, inactivas.data, verInactivas],
+  )
+
   const columnas = useMemo<ColumnDef<Categoria>[]>(
     () => [
       { accessorKey: 'id', header: 'ID' },
-      { accessorKey: 'nombre', header: 'Nombre', cell: ({ row }) => <span className="font-medium">{row.original.nombre}</span> },
+      {
+        accessorKey: 'nombre',
+        header: 'Nombre',
+        cell: ({ row }) => (
+          <span className="flex items-center gap-2">
+            <span className={`font-medium ${row.original.activo ? '' : 'text-stone-400 line-through'}`}>
+              {row.original.nombre}
+            </span>
+            {!row.original.activo && (
+              <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">Dada de baja</span>
+            )}
+          </span>
+        ),
+      },
       {
         accessorKey: 'descripcion',
         header: 'Descripción',
@@ -72,19 +109,24 @@ export function AdminCategoriasPage() {
         id: 'acciones',
         header: 'Acciones',
         enableSorting: false,
-        cell: ({ row }) => (
-          <div className="flex gap-1.5">
-            <Button tamano="sm" variante="secundario" onClick={() => abrir({ modo: 'editar', categoria: row.original })}>
-              Editar
+        cell: ({ row }) =>
+          row.original.activo ? (
+            <div className="flex gap-1.5">
+              <Button tamano="sm" variante="secundario" onClick={() => abrir({ modo: 'editar', categoria: row.original })}>
+                Editar
+              </Button>
+              <Button tamano="sm" variante="peligro" onClick={() => setAEliminar(row.original)}>
+                Dar de baja
+              </Button>
+            </div>
+          ) : (
+            <Button tamano="sm" variante="secundario" onClick={() => void reactivarCategoria(row.original)}>
+              Reactivar
             </Button>
-            <Button tamano="sm" variante="peligro" onClick={() => setAEliminar(row.original)}>
-              Dar de baja
-            </Button>
-          </div>
-        ),
+          ),
       },
     ],
-    [],
+    [reactivarCategoria],
   )
 
   return (
@@ -94,6 +136,16 @@ export function AdminCategoriasPage() {
         <Button onClick={() => abrir({ modo: 'crear' })}>+ Nueva categoría</Button>
       </div>
 
+      <label className="flex w-fit items-center gap-2 text-sm text-stone-700">
+        <input
+          type="checkbox"
+          checked={verInactivas}
+          onChange={(e) => setVerInactivas(e.target.checked)}
+          className="size-4 accent-brand-600"
+        />
+        Mostrar dadas de baja
+      </label>
+
       <MensajeError mensaje={error} />
 
       {categorias.isPending ? (
@@ -101,7 +153,7 @@ export function AdminCategoriasPage() {
       ) : categorias.isError ? (
         <EstadoError error={categorias.error} onReintentar={() => void categorias.refetch()} />
       ) : (
-        <TablaDatos datos={categorias.data} columnas={columnas} mensajeVacio="No hay categorías activas" />
+        <TablaDatos datos={filas} columnas={columnas} mensajeVacio="No hay categorías activas" />
       )}
 
       <Modal

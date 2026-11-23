@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Response, status
 
 from app.core.deps import AdminUser
 from app.modules.categorias.schemas import CategoriaCreate, CategoriaRead, CategoriaUpdate
-from app.modules.categorias.service import CategoriaNoEncontrada, CategoriaService, NombreDuplicado
+from app.modules.categorias.service import (
+    CategoriaNoEncontrada,
+    CategoriaService,
+    CategoriaYaActiva,
+    NombreDuplicado,
+)
 from app.modules.categorias.unit_of_work import CategoriaUnitOfWork
 
 router = APIRouter(prefix="/categorias", tags=["Categorías"])
@@ -23,7 +28,7 @@ def _a_http(error: Exception) -> HTTPException:
     """Traduce las excepciones de dominio a respuestas HTTP."""
     if isinstance(error, CategoriaNoEncontrada):
         return HTTPException(status.HTTP_404_NOT_FOUND, str(error))
-    if isinstance(error, NombreDuplicado):
+    if isinstance(error, (NombreDuplicado, CategoriaYaActiva)):
         return HTTPException(status.HTTP_409_CONFLICT, str(error))
     return HTTPException(status.HTTP_400_BAD_REQUEST, str(error))
 
@@ -31,6 +36,13 @@ def _a_http(error: Exception) -> HTTPException:
 @router.get("", response_model=list[CategoriaRead])
 def listar_categorias(service: Service) -> list[CategoriaRead]:
     return service.listar()
+
+
+# Se declara antes de /{id} para que "inactivas" no se tome como un id
+@router.get("/inactivas", response_model=list[CategoriaRead])
+def listar_categorias_inactivas(_admin: AdminUser, service: Service) -> list[CategoriaRead]:
+    """Categorías dadas de baja (solo admin). Los listados públicos siguen mostrando solo activas."""
+    return service.listar_inactivas()
 
 
 @router.get("/{id}", response_model=CategoriaRead)
@@ -66,3 +78,12 @@ def eliminar_categoria(id: IdCategoria, _admin: AdminUser, service: Service) -> 
     except CategoriaNoEncontrada as e:
         raise _a_http(e) from e
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.patch("/{id}/reactivar", response_model=CategoriaRead)
+def reactivar_categoria(id: IdCategoria, _admin: AdminUser, service: Service) -> CategoriaRead:
+    """Revierte la baja lógica: 404 si no existe, 409 si ya está activa."""
+    try:
+        return service.reactivar(id)
+    except (CategoriaNoEncontrada, CategoriaYaActiva) as e:
+        raise _a_http(e) from e
